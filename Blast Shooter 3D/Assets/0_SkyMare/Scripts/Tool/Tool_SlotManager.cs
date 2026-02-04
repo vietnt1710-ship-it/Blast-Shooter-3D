@@ -79,7 +79,7 @@ public class Tool_SlotManager : MonoBehaviour
         // Số hàng cần thiết (ceil)
         int rows = (count + cols - 1) / cols;
 
-        //gridTile = new SlotTile[rows, cols];
+        gridTile = new Tool_Slot[rows, cols];
 
         for (int i = 0; i < count; i++)
         {
@@ -89,13 +89,13 @@ public class Tool_SlotManager : MonoBehaviour
             int col = i % cols;
             int row = i / cols;
 
-            //SlotTile s = t.GetComponentInChildren<SlotTile>();
-            //if (s != null)
-           // {
-            //    s.row = row;
-            //    s.col = col;
-           // }
-          //  gridTile[row, col] = s;
+            Tool_Slot s = t.GetComponentInChildren<Tool_Slot>();
+            if (s != null)
+            {
+                s.row = row;
+                s.col = col;
+            }
+            gridTile[row, col] = s;
 
         }
     }

@@ -77,13 +77,15 @@ public class Tool_Slot : MonoBehaviour
         typeText.text = direction.ToString();   
     }
     TypeAndIDAndButton select;
-    int id = 0;
+    public int id = 0;
     int colorID;
+    public int bulletCount = 0;
 
     public void InitPipe()
     {
         if (id != 6) return;
         string data = $"{20}_{ToolManager.I.colorID}";
+        dataIngaras.Add(data);
     }
     bool isOpen = false;
     public void OpenGara()
@@ -163,6 +165,8 @@ public class Tool_Slot : MonoBehaviour
     {
         int text1 = int.Parse(mainText.text);
         int text2 = int.Parse(typeText.text);
+
+        bulletCount = text1;
         switch (id)
         {
             case 1:
@@ -220,16 +224,22 @@ public class Tool_Slot : MonoBehaviour
     {
         isSelect = true;
 
-        if (!isOpen)
+        if (id == 6)
         {
-            OpenGara();
-            isOpen = true;
+            if (!isOpen)
+            {
+                Debug.Log("Opening Gara");
+                OpenGara();
+                isOpen = true;
+            }
+            else
+            {
+                Debug.Log("Closing Gara");  
+                CloseGara();
+                isOpen = false;
+            }
         }
-        else
-        {
-            CloseGara();
-            isOpen = false;
-        }
+       
         if (input.isInputting) return;
 
         if (!isShift)

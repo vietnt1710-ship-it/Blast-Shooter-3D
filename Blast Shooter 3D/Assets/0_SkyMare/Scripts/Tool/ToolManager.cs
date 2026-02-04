@@ -32,6 +32,7 @@ public class ToolManager : Singleton<ToolManager>
     }
 
     public List<TypeAndIDAndButton> typeButtonList;
+    
     protected void Awake()
     {
         for(int i = 0; i < typeButtonList.Count; i++)
@@ -45,6 +46,27 @@ public class ToolManager : Singleton<ToolManager>
     public Color currentColor;
     public int colorID;
     public ColorID colorWithID;
+    public VoxelLayerPainter painter;
+    public Tool_SlotManager slotManager;
+
+    public void Update()
+    {
+        List<int> cubeVerUniqueColors = new List<int>(painter.cubeVerUniqueColors);
+        
+        for (int row = 0; row < 10; row++)
+        {
+            for (int col = 0; col < 10; col++)
+            {
+               Tool_Slot slot = slotManager.gridTile[row, col];
+
+               if (slot.id != 0)
+               {
+                   
+               }
+            }
+        }
+    }
+
     public void ChangeColor(Color color)
     {
         currentColor = color;

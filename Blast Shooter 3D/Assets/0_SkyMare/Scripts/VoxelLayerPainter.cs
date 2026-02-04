@@ -40,6 +40,9 @@ public class VoxelLayerPainter : MonoBehaviour
     [Header("Palette (Unique Colors)")]
     public List<Color32> uniqueColors = new List<Color32>();
 
+    [Header("Count cubes per unique color")]
+    public List<int> cubeVerUniqueColors = new List<int>(); // <- cái bạn cần
+    
     [Header("Button")]
     public Transform colorButtonPanel;
     public Button buttonColor;
@@ -72,7 +75,12 @@ public class VoxelLayerPainter : MonoBehaviour
     int currentIndex = -1;
     Color32 currentColor;
 
-   
+    // ====== internal for fast count update ======
+    public List<Button> _colorButtons = new List<Button>();
+    readonly Dictionary<uint, int> _paletteIndex = new Dictionary<uint, int>(256);
+
+    static uint Pack(Color32 c) => (uint)(c.r | (c.g << 8) | (c.b << 16) | (c.a << 24));
+
     void Awake()
     {
         _mpb = new MaterialPropertyBlock();
@@ -108,7 +116,7 @@ public class VoxelLayerPainter : MonoBehaviour
             cameraRoot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
 
-        // PAINT: update BOTH renderer + DATA
+        // PAINT: update BOTH renderer + DATA + COUNTS
         if (Input.GetMouseButton(0) && currentIndex != -1)
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -118,18 +126,27 @@ public class VoxelLayerPainter : MonoBehaviour
                 var r = hit.collider.GetComponent<Renderer>();
                 if (r == null) return;
 
-                // bắt đúng cube bằng tag
                 var tag = hit.collider.GetComponent<VoxelCubeTag>();
                 if (tag == null || tag.data == null) return;
 
+                // old/new color
+                Color32 oldColor = tag.data.color;
+                Color32 newColor = currentColor;
+
+                // nếu cùng màu thì thôi
+                if (Pack(oldColor) == Pack(newColor)) return;
+
                 // 1) Update DATA
-                tag.data.color = currentColor;
+                tag.data.color = newColor;
 
                 // 2) Update Renderer
                 r.GetPropertyBlock(_mpb);
-                _mpb.SetColor("_BaseColor", (Color)currentColor);
-                _mpb.SetColor("_Color", (Color)currentColor);
+                _mpb.SetColor("_BaseColor", (Color)newColor);
+                _mpb.SetColor("_Color", (Color)newColor);
                 r.SetPropertyBlock(_mpb);
+
+                // 3) Update counts + button text realtime
+                UpdateCountsAfterPaint(oldColor, newColor);
             }
         }
     }
@@ -138,23 +155,60 @@ public class VoxelLayerPainter : MonoBehaviour
 
     public void LoadUI()
     {
+        BuildPaletteIndex();
+        RecountCubesPerColor();
+
         ClearColorButtons();
-        LoadColorButton();
+        LoadColorButton();      // tạo button + set text = count
         InitWhenDropDown();
+    }
+
+    void BuildPaletteIndex()
+    {
+        _paletteIndex.Clear();
+        for (int i = 0; i < uniqueColors.Count; i++)
+        {
+            uint k = Pack(uniqueColors[i]);
+            if (!_paletteIndex.ContainsKey(k))
+                _paletteIndex.Add(k, i);
+        }
+
+        // đảm bảo list count đúng size
+        if (cubeVerUniqueColors == null) cubeVerUniqueColors = new List<int>();
+        cubeVerUniqueColors.Clear();
+        for (int i = 0; i < uniqueColors.Count; i++) cubeVerUniqueColors.Add(0);
+    }
+
+    void RecountCubesPerColor()
+    {
+        // reset
+        for (int i = 0; i < cubeVerUniqueColors.Count; i++)
+            cubeVerUniqueColors[i] = 0;
+
+        // count theo groupedByY
+        for (int i = 0; i < groupedByY.Count; i++)
+        {
+            var cubes = groupedByY[i].cubes;
+            if (cubes == null) continue;
+
+            for (int j = 0; j < cubes.Count; j++)
+            {
+                var cd = cubes[j];
+                uint k = Pack(cd.color);
+                if (_paletteIndex.TryGetValue(k, out int idx))
+                    cubeVerUniqueColors[idx]++;
+            }
+        }
     }
 
     void ClearColorButtons()
     {
+        _colorButtons.Clear();
         if (colorButtonPanel == null) return;
 
-        // chỉ xoá những button clone (giữ template nếu bạn để template inactive trong panel)
+        // xoá tất cả con trong panel (trừ template nếu bạn đang để template nằm ngoài panel)
         for (int i = colorButtonPanel.childCount - 1; i >= 0; i--)
-        {
-            var child = colorButtonPanel.GetChild(i);
-            // nếu child chính là buttonColor prefab instance thì xóa hết
-            if (buttonColor == null || child.gameObject != buttonColor.gameObject)
-                Destroy(child.gameObject);
-        }
+            Destroy(colorButtonPanel.GetChild(i).gameObject);
     }
 
     public void LoadColorButton()
@@ -166,11 +220,33 @@ public class VoxelLayerPainter : MonoBehaviour
             Button b = Instantiate(buttonColor, colorButtonPanel);
             b.transform.localScale = Vector3.one;
             b.gameObject.SetActive(true);
+
             b.image.color = uniqueColors[i];
+
+            // set text count
+            var txt = b.GetComponentInChildren<TMP_Text>(true);
+            if (txt != null)
+                txt.text = cubeVerUniqueColors != null && i < cubeVerUniqueColors.Count
+                    ? cubeVerUniqueColors[i].ToString()
+                    : "0";
 
             int index = i;
             b.onClick.RemoveAllListeners();
             b.onClick.AddListener(() => ChangeColor(index));
+
+            _colorButtons.Add(b);
+            
+            var img = b.GetComponent<Image>();
+            if (img != null) img.enabled = true;
+
+            var btn = b.GetComponent<Button>();
+            if (btn != null) btn.enabled = true;
+            
+            if (txt != null)
+            {
+                txt.enabled = true;
+                txt.gameObject.SetActive(true);
+            }
         }
     }
 
@@ -180,11 +256,46 @@ public class VoxelLayerPainter : MonoBehaviour
 
         currentIndex = index;
         currentColor = uniqueColors[index];
-        ToolManager.I.ChangeColor(uniqueColors[index]);
 
         if (selectedColorImage != null)
             selectedColorImage.color = uniqueColors[index];
     }
+
+    // Update count sau khi paint đổi 1 cube từ old -> new
+    void UpdateCountsAfterPaint(Color32 oldColor, Color32 newColor)
+    {
+        uint ok = Pack(oldColor);
+        uint nk = Pack(newColor);
+
+        if (!_paletteIndex.TryGetValue(ok, out int oldIdx)) oldIdx = -1;
+        if (!_paletteIndex.TryGetValue(nk, out int newIdx)) newIdx = -1;
+
+        if (oldIdx >= 0 && oldIdx < cubeVerUniqueColors.Count)
+        {
+            cubeVerUniqueColors[oldIdx] = Mathf.Max(0, cubeVerUniqueColors[oldIdx] - 1);
+            UpdateButtonText(oldIdx);
+        }
+
+        if (newIdx >= 0 && newIdx < cubeVerUniqueColors.Count)
+        {
+            cubeVerUniqueColors[newIdx] += 1;
+            UpdateButtonText(newIdx);
+        }
+    }
+
+    void UpdateButtonText(int paletteIndex)
+    {
+        if (paletteIndex < 0 || paletteIndex >= _colorButtons.Count) return;
+
+        var b = _colorButtons[paletteIndex];
+        if (b == null) return;
+
+        var txt = b.GetComponentInChildren<TMP_Text>(true);
+        if (txt != null)
+            txt.text = cubeVerUniqueColors[paletteIndex].ToString();
+    }
+
+    // ===================== Layers dropdown =====================
 
     void InitWhenDropDown()
     {
@@ -304,7 +415,7 @@ public class VoxelLayerPainter : MonoBehaviour
                 {
                     xIndex = c.xIndex,
                     zIndex = c.zIndex,
-                    color = c.color, // <- đã được update khi paint
+                    color = c.color,
                     cube = null
                 });
             }
@@ -317,12 +428,10 @@ public class VoxelLayerPainter : MonoBehaviour
     {
         if (src == null) return;
 
-        // load palette
         uniqueColors.Clear();
         for (int i = 0; i < src.colors.Count; i++)
             uniqueColors.Add((Color32)src.colors[i]);
 
-        // load voxelData (Transform sẽ null)
         groupedByY.Clear();
         for (int i = 0; i < src.voxelData.Count; i++)
         {
@@ -348,8 +457,7 @@ public class VoxelLayerPainter : MonoBehaviour
 
         SpawnVoxelsFromLevelData(src);
 
-        // IMPORTANT: load lại UI sau khi đã có groupedByY + uniqueColors
-        LoadUI();
+        LoadUI(); // <- rebuild buttons + counts + dropdown
     }
 
     public void SpawnVoxelsFromLevelData(LevelData src)
@@ -375,7 +483,6 @@ public class VoxelLayerPainter : MonoBehaviour
         var mpb = new MaterialPropertyBlock();
         Vector3 scale = Vector3.one * (vs * voxelizerPro.cubeFill);
 
-        // rebuild groupedByY with fresh transforms + tag.data ref
         var layerMap = new Dictionary<int, LayerGroup>();
         groupedByY.Clear();
 
@@ -405,7 +512,7 @@ public class VoxelLayerPainter : MonoBehaviour
                 };
                 g.cubes.Add(cd);
 
-                // gắn tag để paint update data
+                // tag để paint update data
                 var tag = go.GetComponent<VoxelCubeTag>();
                 if (tag == null) tag = go.AddComponent<VoxelCubeTag>();
                 tag.data = cd;

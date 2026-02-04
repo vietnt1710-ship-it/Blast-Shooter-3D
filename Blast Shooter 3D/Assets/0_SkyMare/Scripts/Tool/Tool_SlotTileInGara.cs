@@ -39,13 +39,15 @@ public class Tool_SlotTileInGara : MonoBehaviour
     }
     public void Init(Tool_Slot root, int index)
     {
-        this.gameObject.SetActive(false);
+        this.gameObject.SetActive(true);
         source = root.dataIngaras[index];
 
         string blc;
         string cli;
         GridParse.OnSplitBeAf(source, out blc, out cli);
 
+        this.root = root;
+        this.index = index;
         bulletCount = int.Parse(blc);
         colorID = int.Parse(cli);
         main.material.color = ToolManager.I.colorWithID.ColorWithID2(colorID).color;
