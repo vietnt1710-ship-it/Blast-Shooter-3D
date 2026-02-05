@@ -54,7 +54,7 @@ public class Tool_SlotManager : MonoBehaviour
             for (int col = 0; col < cols; col++)
             {
                 //gridTile[row, col].UpdateValue();
-                //grid[row, col] = gridTile[row, col].value;
+                grid[row, col] = gridTile[row, col].outPut;
             }
         }
         return grid;

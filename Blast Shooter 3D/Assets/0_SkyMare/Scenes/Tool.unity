@@ -21169,6 +21169,7 @@ MonoBehaviour:
   voxelLayerPainter: {fileID: 15667469}
   configFolder: Assets/GameConfig
   configs: []
+  select: {fileID: 0}
 --- !u!1001 &16802748
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -32137,6 +32138,7 @@ MonoBehaviour:
   painter: {fileID: 15667469}
   slotManager: {fileID: 1773156943}
   cubeVerUniqueColors: 
+  picker: {fileID: 15667470}
   tool_SlotTileInGaras:
   - {fileID: 837058038}
   - {fileID: 767785274}
@@ -32146,6 +32148,7 @@ MonoBehaviour:
   - {fileID: 861798614}
   - {fileID: 1403166743}
   - {fileID: 1268063722}
+  levelDataPath: Assets/0_SkyMare/GameConfig/Data
 --- !u!1001 &865908997
 PrefabInstance:
   m_ObjectHideFlags: 0
