@@ -254,12 +254,14 @@ public class VoxelLayerPainter : MonoBehaviour
     {
         if (index < 0 || index >= uniqueColors.Count) return;
 
-        ToolManager.I.ChangeColor(uniqueColors[index]);
+       
         currentIndex = index;
         currentColor = uniqueColors[index];
 
         if (selectedColorImage != null)
             selectedColorImage.color = uniqueColors[index];
+
+        ToolManager.I.ChangeColor(uniqueColors[index]); 
     }
 
     // Update count sau khi paint đổi 1 cube từ old -> new
@@ -357,7 +359,7 @@ public class VoxelLayerPainter : MonoBehaviour
                     cd.cube.gameObject.SetActive(true);
         }
     }
-
+    public int Name;
 #if UNITY_EDITOR
     [ContextMenu("Export LevelData (Create New Asset)")]
     public void ExportToNewLevelDataAsset()
@@ -372,7 +374,7 @@ public class VoxelLayerPainter : MonoBehaviour
         LevelData newData = ScriptableObject.CreateInstance<LevelData>();
         ExportToLevelData(newData);
 
-        string fileName = $"{gameObject.name}_LevelData_{System.DateTime.Now:yyyyMMdd_HHmmss}.asset";
+        string fileName = $"Level {Name}.asset";
         string assetPath = AssetDatabase.GenerateUniqueAssetPath(Path.Combine(folder, fileName));
 
         AssetDatabase.CreateAsset(newData, assetPath);

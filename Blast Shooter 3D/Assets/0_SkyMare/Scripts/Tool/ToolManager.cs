@@ -140,6 +140,18 @@ public class ToolManager : Singleton<ToolManager>
     {
         Export();
     }
+    public void LoadData()
+    {
+        for (int row = 0; row < 10; row++)
+        {
+            for (int col = 0; col < 10; col++)
+            {
+                Tool_Slot slot = slotManager.gridTile[row, col];
+
+                slot.Clear();
+            }
+        }
+    }
     private void Export()
     {
 
@@ -161,7 +173,7 @@ public class ToolManager : Singleton<ToolManager>
     {
         // Tạo timestamp tránh ký tự không hợp lệ
         string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        string fullPath = $"{levelDataPath}/_TextGrid_{timestamp}.txt";
+        string fullPath = $"{levelDataPath}/{picker.select}_TextGrid_{timestamp}.txt";
 
         StringBuilder sb = new StringBuilder();
 

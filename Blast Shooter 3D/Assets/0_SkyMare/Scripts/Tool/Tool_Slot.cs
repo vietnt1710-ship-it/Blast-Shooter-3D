@@ -1,7 +1,8 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 using static ToolManager;
 
 public class Tool_Slot : MonoBehaviour
@@ -15,7 +16,7 @@ public class Tool_Slot : MonoBehaviour
   
     bool isShift = false;
 
-    public string outPut = "";
+    public string outPut = "0";
     [Header("Gara only using")]
     public List<string> dataIngaras = new List<string>();
 
@@ -75,6 +76,23 @@ public class Tool_Slot : MonoBehaviour
     public void ChangePipeDirection(int direction)
     {
         typeText.text = direction.ToString();   
+
+        if(direction == 1)
+        {
+            mainText.text = "Up";
+        }
+        else if(direction == 2)
+        {
+            mainText.text = "Down";
+        }
+        else if(direction == 3)
+        {
+            mainText.text = ">";
+        }
+        else
+        {
+            mainText.text = "<";
+        }
     }
     TypeAndIDAndButton select;
     public int id = 0;
@@ -109,7 +127,7 @@ public class Tool_Slot : MonoBehaviour
         {
             if (dataIngaras[i] == "0")
             {
-                dataIngaras.RemoveAt(i);
+                dataIngaras.Remove(dataIngaras[i]);
                 i--;
             }
         }
@@ -139,16 +157,21 @@ public class Tool_Slot : MonoBehaviour
             main.material.color = ToolManager.I.color;
             mainText.text = "0";
         }
+        if(id == 1)
+        {
+            type.gameObject.SetActive(false);
+        }
+        else 
+        { type.gameObject.SetActive(true); }
 
         type.color = select.GetButtonColor();
 
         switch (id)
         {
-            case 1:
-                typeText.gameObject.SetActive(false);
-                break;
+     
             case 2:
-                typeText.gameObject.SetActive(false);
+                typeText.gameObject.SetActive(true);
+                typeText.text = "?";
                 break;
             case 3:
                 typeText.gameObject.SetActive(true);
@@ -175,7 +198,9 @@ public class Tool_Slot : MonoBehaviour
     }
     public void ConfirmData()
     {
-        int text2 = int.Parse(typeText.text);
+        int text2 = 0;
+            if (int.TryParse(typeText.text, out text2))
+                 Debug.Log("Hehe");
         if (id == 6)
         {
             outPut = $"{id}{text2}_";
@@ -224,11 +249,42 @@ public class Tool_Slot : MonoBehaviour
         }
         ToolManager.I.UpdateCount();
     }
+    public void LoadData(string source)
+    {
+        this.outPut = source;
+
+        string be;
+        string af;
+        try
+        {
+            GridParse.OnSplitBeAf(source, out be, out af);
+
+        }
+        catch
+        {
+            var latchBe = GridParse.IdAfter1Char(source);
+
+            if (latchBe >= 10)// có 2 chữ số thì là head, số sau là key
+            {
+                int latchID = GridParse.IdAfter1Char(latchBe.ToString());
+                typeText.gameObject.SetActive(true); typeText.text = latchID.ToString();
+                id = 81;
+            }
+            else
+            {
+                typeText.gameObject.SetActive(true); typeText.text = latchBe.ToString();
+                id = 8;
+            }
+        }
+        
+    }
     public void Clear()
     {
         id = 0;
 
-        outPut = "";
+        outPut = "0";
+
+        dataIngaras.Clear();
 
         main.material.color = Color.white;
         main.gameObject.SetActive(false);

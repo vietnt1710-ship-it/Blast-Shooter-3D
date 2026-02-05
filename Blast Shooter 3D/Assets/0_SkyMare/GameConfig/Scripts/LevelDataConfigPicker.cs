@@ -100,7 +100,7 @@ public class LevelDataConfigPicker : MonoBehaviour
 
             // hiển thị: Name (layers)
             int layerCount = (d.voxelData != null) ? d.voxelData.Count : 0;
-            opts.Add($"{d.name}  (layers: {layerCount})");
+            opts.Add($"{d.name}");
         }
 
         if (opts.Count == 0)
