@@ -113,7 +113,7 @@ public class VoxelLayerPainter : MonoBehaviour
             _pitch = e.x;
         }
     }
-
+    private bool clickEd = false;
     void Update()
     {
         if (cameraRoot != null && Input.GetMouseButton(1))
@@ -127,75 +127,93 @@ public class VoxelLayerPainter : MonoBehaviour
 
             cameraRoot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
-
-        // CLICK tools: Ctrl = delete, Shift = add (prefer into object), else = paint
-        if (Input.GetMouseButtonDown(0)) // <- CHỈ 1 lần / 1 click
+        if (Input.GetMouseButtonUp(0))
         {
+            clickEd = false;
+        }
+            // CLICK tools: Ctrl = delete, Shift = add (prefer into screen), else = paint
+            if (Input.GetMouseButton(0))
+        {
+           
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool shift = Input.GetKey(KeyCode.LeftShift); // bạn yêu cầu shift trái
 
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-            // IMPORTANT: Shift/Ctrl đều cần hit cube để biết cell + normal
-            if (!Physics.Raycast(ray, out RaycastHit hit, rayDistance, paintMask, QueryTriggerInteraction.Ignore))
-                return;
-
-            var tag = hit.collider.GetComponent<VoxelCubeTag>();
-            if (tag == null || tag.data == null)
-                return;
-
-            // ===== CTRL: delete 1 cube =====
-            if (ctrl)
+            // CTRL/paint cần hit cube, SHIFT có thể hit cube (để biết normal) hoặc hit gì đó gần đó
+            if (Physics.Raycast(ray, out RaycastHit hit, rayDistance, paintMask, QueryTriggerInteraction.Ignore))
             {
-                RemoveCubeByTag(tag);
-                return;
+                var tag = hit.collider.GetComponent<VoxelCubeTag>();
+
+                // ===== CTRL: delete =====
+                if (ctrl && !clickEd)
+                {
+                    
+                    if (tag != null && tag.data != null)
+                    {
+                        RemoveCubeByTag(tag);
+                    }
+                    clickEd = true;
+                    return;
+                }
+
+                // ===== SHIFT: add cube into screen (inside) =====
+                if (shift && !clickEd)
+                {
+                    clickEd = true;
+                    if (currentIndex == -1) return; // cần có màu đang chọn để add
+
+                    // base cell = cell của cube đang hit (nếu hit cube)
+                    // rồi add theo hướng -normal (ưu tiên "vào màn hình"/vào object)
+                    if (WorldToGrid(hit.point, out int hx, out int hy, out int hz))
+                    {
+                        Vector3 n = hit.normal;
+
+                        // chọn axis chính của normal
+                        Vector3 an = new Vector3(Mathf.Abs(n.x), Mathf.Abs(n.y), Mathf.Abs(n.z));
+                        int dx = 0, dy = 0, dz = 0;
+
+                        // -normal => hướng "đi vào"
+                        if (an.x >= an.y && an.x >= an.z) dx = (n.x > 0f) ? -1 : 1;
+                        else if (an.y >= an.x && an.y >= an.z) dy = (n.y > 0f) ? -1 : 1;
+                        else dz = (n.z > 0f) ? -1 : 1;
+
+                        // Nếu hit cube, lấy cell của cube để offset cho chuẩn hơn
+                        if (tag != null && tag.data != null)
+                        {
+                            hx = tag.data.xIndex;
+                            hy = tag.yIndex;
+                            hz = tag.data.zIndex;
+                        }
+
+                        int ax = hx + dx;
+                        int ay = hy + dy;
+                        int az = hz + dz;
+
+                        if (InBounds(ax, ay, az))
+                            AddCubeAt(ax, ay, az, currentColor);
+                    }
+                    return;
+                }
+
+                // ===== NORMAL: paint =====
+                if (currentIndex == -1) return;
+                if (tag == null || tag.data == null) return;
+
+                var r = hit.collider.GetComponent<Renderer>();
+                if (r == null) return;
+
+                Color32 oldColor = tag.data.color;
+                Color32 newColor = currentColor;
+
+                if (Pack(oldColor) == Pack(newColor)) return;
+
+                tag.data.color = newColor;
+                ApplyColorToRenderer(r, newColor);
+
+                UpdateCountsAfterPaint(oldColor, newColor);
             }
-
-            // ===== SHIFT: add 1 cube (into object) =====
-            if (shift)
-            {
-                if (currentIndex == -1) return; // chưa chọn màu
-
-                int hx = tag.data.xIndex;
-                int hy = tag.yIndex;
-                int hz = tag.data.zIndex;
-
-                Vector3 n = hit.normal;
-                Vector3 an = new Vector3(Mathf.Abs(n.x), Mathf.Abs(n.y), Mathf.Abs(n.z));
-
-                int dx = 0, dy = 0, dz = 0;
-
-                // -normal: hướng "vào"
-                if (an.x >= an.y && an.x >= an.z) dx = (n.x > 0f) ? -1 : 1;
-                else if (an.y >= an.x && an.y >= an.z) dy = (n.y > 0f) ? -1 : 1;
-                else dz = (n.z > 0f) ? -1 : 1;
-
-                int ax = hx + dx;
-                int ay = hy + dy;
-                int az = hz + dz;
-
-                if (InBounds(ax, ay, az))
-                    AddCubeAt(ax, ay, az, currentColor);
-
-                return;
-            }
-
-            // ===== NORMAL: paint 1 cube =====
-            if (currentIndex == -1) return;
-
-            var r = hit.collider.GetComponent<Renderer>();
-            if (r == null) return;
-
-            Color32 oldColor = tag.data.color;
-            Color32 newColor = currentColor;
-
-            if (Pack(oldColor) == Pack(newColor)) return;
-
-            tag.data.color = newColor;
-            ApplyColorToRenderer(r, newColor);
-            UpdateCountsAfterPaint(oldColor, newColor);
         }
-
 
     }
 
