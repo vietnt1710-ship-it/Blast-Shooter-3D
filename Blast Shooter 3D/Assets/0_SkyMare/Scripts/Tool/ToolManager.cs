@@ -1,9 +1,10 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static Unity.VisualScripting.Member;
 
 public class ToolManager : Singleton<ToolManager>
 {
@@ -48,22 +49,67 @@ public class ToolManager : Singleton<ToolManager>
     public ColorID colorWithID;
     public VoxelLayerPainter painter;
     public Tool_SlotManager slotManager;
-
-    public void Update()
+    public List<int> cubeVerUniqueColors;
+    public LevelDataConfigPicker picker;
+    public void UpdateCount()
     {
-        List<int> cubeVerUniqueColors = new List<int>(painter.cubeVerUniqueColors);
-        
+        cubeVerUniqueColors = new List<int>(painter.cubeVerUniqueColors);
+
+        Dictionary<int, int> colorCount = new Dictionary<int, int>();
+
         for (int row = 0; row < 10; row++)
         {
             for (int col = 0; col < 10; col++)
             {
                Tool_Slot slot = slotManager.gridTile[row, col];
 
-               if (slot.id != 0)
+               if (slot.id != 6)
                {
-                   
-               }
+                    int colorID = slot.colorID;
+
+                    if (colorCount.ContainsKey(colorID))
+                    {
+                        colorCount[colorID]+= slot.bulletCount;
+                    }
+                    else
+                    {
+                        colorCount[colorID] = slot.bulletCount;
+                    }
+                }
+                else
+                {
+                    for (int k = 0; k < slot.dataIngaras.Count; k++)
+                    {
+                        string blc;
+                        string cli;
+                        GridParse.OnSplitBeAf(slot.dataIngaras[k], out blc, out cli);
+
+                        int colorID = int.Parse(cli);
+                        int bulletCount = int.Parse(blc);
+                        if (colorCount.ContainsKey(colorID))
+                        {
+                            colorCount[colorID] += bulletCount;
+                        }
+                        else
+                        {
+                            colorCount[colorID] = bulletCount;
+                        }
+                    }
+                }
             }
+        }
+        for (int i = 0; i < painter.uniqueColors.Count; i++)
+        {
+            int ID = colorWithID.ColorWithID3(painter.uniqueColors[i]).ID;
+            if (colorCount.ContainsKey(ID))
+            {
+                cubeVerUniqueColors[i] -= colorCount[ID];
+                painter._colorButtons[i].GetComponentInChildren<TMP_Text>().text = cubeVerUniqueColors[i].ToString();
+            }
+            //else
+            //{
+            //    bottle.UpdateValue(0);
+            //}
         }
     }
 

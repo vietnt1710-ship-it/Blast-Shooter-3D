@@ -78,7 +78,7 @@ public class Tool_Slot : MonoBehaviour
     }
     TypeAndIDAndButton select;
     public int id = 0;
-    int colorID;
+    public int colorID;
     public int bulletCount = 0;
 
     public void InitPipe()
@@ -86,6 +86,7 @@ public class Tool_Slot : MonoBehaviour
         if (id != 6) return;
         string data = $"{20}_{ToolManager.I.colorID}";
         dataIngaras.Add(data);
+        OpenGara();
     }
     bool isOpen = false;
     public void OpenGara()
@@ -101,16 +102,27 @@ public class Tool_Slot : MonoBehaviour
         for (int i = 0; i < ToolManager.I.tool_SlotTileInGaras.Count; i++)
         {
             int index = i;
+            dataIngaras[i] = ToolManager.I.tool_SlotTileInGaras[index].source;
             ToolManager.I.tool_SlotTileInGaras[index].Close();
         }
-        dataIngaras.RemoveAll(x => x == "0");
+        for(int i = 0; i <= dataIngaras.Count; i++)
+        {
+            if (dataIngaras[i] == "0")
+            {
+                dataIngaras.RemoveAt(i);
+                i--;
+            }
+        }
+        
+
+        ToolManager.I.UpdateCount();
     }
     public void InitSlot()
     {
         main.gameObject.SetActive(true);
         type.gameObject.SetActive(true );
 
-       select = ToolManager.I.selectTypeAndIDandButton;
+        select = ToolManager.I.selectTypeAndIDandButton;
         id = select.type.tileID;
         colorID = ToolManager.I.colorID;
         if (id == 8 || id == 81)
@@ -148,7 +160,7 @@ public class Tool_Slot : MonoBehaviour
                 typeText.gameObject.SetActive(true);
                 break;
             case 6:
-                typeText.gameObject.SetActive(false);
+                typeText.gameObject.SetActive(true);
                 break;
             case 7:
                 typeText.gameObject.SetActive(true);
@@ -163,8 +175,19 @@ public class Tool_Slot : MonoBehaviour
     }
     public void ConfirmData()
     {
-        int text1 = int.Parse(mainText.text);
         int text2 = int.Parse(typeText.text);
+        if (id == 6)
+        {
+            outPut = $"{id}{text2}_";
+            for (int i = 0; i < dataIngaras.Count; i++)
+            {
+                outPut += dataIngaras[i].ToString() + (i == dataIngaras.Count - 1 ? "" : "+");
+            }
+            //typeText.gameObject.SetActive(false);
+            return;
+        }
+        int text1 = int.Parse(mainText.text);
+       
 
         bulletCount = text1;
         switch (id)
@@ -186,14 +209,6 @@ public class Tool_Slot : MonoBehaviour
                 outPut = $"{id}{text2}_{text1}_{colorID}";
                 typeText.gameObject.SetActive(true);
                 break;
-            case 6:
-                outPut = $"{id}{text2}_";
-                for (int i = 0; i < dataIngaras.Count; i++)
-                {
-                    outPut +=  dataIngaras[i].ToString() + (i == dataIngaras.Count -1 ? "" :"+");
-                }
-                typeText.gameObject.SetActive(false);
-                break;
             case 7:
                 outPut = $"{id}{text2}_{text1}_{colorID}";
                 typeText.gameObject.SetActive(true);
@@ -207,6 +222,7 @@ public class Tool_Slot : MonoBehaviour
                 break;
 
         }
+        ToolManager.I.UpdateCount();
     }
     public void Clear()
     {
@@ -220,24 +236,33 @@ public class Tool_Slot : MonoBehaviour
         typeText.gameObject.SetActive(true);
         type.gameObject.SetActive(false);
     }
-    public void OnMouseDown()
+    public void OnMouseEnter()
     {
         isSelect = true;
-
+    }
+    public void OnMouseExit()
+    {
+        isSelect = false;
+    }
+    public void OnMouseDown()
+    {
         if (id == 6)
         {
             if (!isOpen)
             {
                 Debug.Log("Opening Gara");
-                OpenGara();
                 isOpen = true;
+                OpenGara();
+               
             }
             else
             {
-                Debug.Log("Closing Gara");  
-                CloseGara();
+                Debug.Log("Closing Gara");
                 isOpen = false;
+                CloseGara();
+               
             }
+            return;
         }
        
         if (input.isInputting) return;
@@ -253,6 +278,6 @@ public class Tool_Slot : MonoBehaviour
     }
     public void OnMouseUp()
     {
-        isSelect = false;
+       
     }
 }

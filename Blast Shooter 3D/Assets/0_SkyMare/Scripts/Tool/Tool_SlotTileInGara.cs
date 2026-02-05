@@ -19,6 +19,8 @@ public class Tool_SlotTileInGara : MonoBehaviour
 
     public void Update()
     {
+        if (!isSelect) return;
+
         if (Input.GetKeyDown(KeyCode.C))
         {
             InitColor();
@@ -77,7 +79,17 @@ public class Tool_SlotTileInGara : MonoBehaviour
     public void OnMouseDown()
     {
         if (input.isInputting) return;
+        Debug.Log("PipeDataClick");
 
         input.StartInput(mainText);
+    }
+    bool isSelect = false;
+    public void OnMouseEnter()
+    {
+        isSelect = true;
+    }
+    public void OnMouseExit()
+    {
+        isSelect = false;
     }
 }

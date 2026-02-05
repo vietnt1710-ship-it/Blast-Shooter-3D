@@ -254,6 +254,7 @@ public class VoxelLayerPainter : MonoBehaviour
     {
         if (index < 0 || index >= uniqueColors.Count) return;
 
+        ToolManager.I.ChangeColor(uniqueColors[index]);
         currentIndex = index;
         currentColor = uniqueColors[index];
 

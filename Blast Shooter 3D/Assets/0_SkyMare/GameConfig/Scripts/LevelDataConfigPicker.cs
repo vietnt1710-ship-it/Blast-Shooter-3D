@@ -25,7 +25,7 @@ public class LevelDataConfigPicker : MonoBehaviour
     [SerializeField] private List<LevelData> configs = new List<LevelData>();
 
     int _currentIndex = -1;
-
+    public LevelData select;
     void Awake()
     {
         if (btnLoadSelected != null)
@@ -155,7 +155,7 @@ public class LevelDataConfigPicker : MonoBehaviour
             Debug.LogWarning("[LevelDataConfigPicker] Selected config is null.");
             return;
         }
-
+        select = data;
         voxelLayerPainter.LoadDataToRuntime(data);
     }
 
