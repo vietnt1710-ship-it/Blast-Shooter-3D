@@ -1,4 +1,5 @@
 ﻿
+using DG.Tweening;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -135,6 +136,7 @@ public class ToolManager : Singleton<ToolManager>
         {
             SaveData();
         }
+
     }
     public void SaveData()
     {
@@ -142,16 +144,16 @@ public class ToolManager : Singleton<ToolManager>
     }
     public void LoadData()
     {
-        for (int row = 0; row < 10; row++)
-        {
-            for (int col = 0; col < 10; col++)
-            {
-                Tool_Slot slot = slotManager.gridTile[row, col];
+        if (picker.select.grid == null) return;
 
-                slot.Clear();
-            }
-        }
+        slotManager.ReLoad(ExpandGrid());
+
+        DOVirtual.DelayedCall(0.2f, () =>
+        {
+            UpdateCount();
+        });
     }
+
     private void Export()
     {
 
@@ -326,32 +328,32 @@ public class ToolManager : Singleton<ToolManager>
     /// <param name="offsetRow">Vị trí hàng bắt đầu đặt grid (mặc định 0)</param>
     /// <param name="offsetCol">Vị trí cột bắt đầu đặt grid (mặc định 0)</param>
     /// <returns>Grid mới với kích thước cố định</returns>
-    //public string[,] ExpandGrid(int targetRows = 10, int targetCols = 10)
-    //{
-    //    var trimmedGrid = data.TxTToGrid();
+    public string[,] ExpandGrid(int targetRows = 10, int targetCols = 10)
+    {
+        var trimmedGrid = picker.select.TxTToGrid();
 
-    //    int trimRows = trimmedGrid.GetLength(0);
-    //    int trimCols = trimmedGrid.GetLength(1);
+        int trimRows = trimmedGrid.GetLength(0);
+        int trimCols = trimmedGrid.GetLength(1);
 
-    //    // Tính toán offset để căn giữa trimmedGrid
-    //    int offsetRow = 0;// (targetRows - trimRows) / 2;
-    //    int offsetCol = (targetCols - trimCols) / 2;
+        // Tính toán offset để căn giữa trimmedGrid
+        int offsetRow = 0;// (targetRows - trimRows) / 2;
+        int offsetCol = (targetCols - trimCols) / 2;
 
-    //    // Tạo grid mới với toàn bộ là "0"
-    //    string[,] expandedGrid = CreateEmptyGrid(targetRows, targetCols);
+        // Tạo grid mới với toàn bộ là "0"
+        string[,] expandedGrid = CreateEmptyGrid(targetRows, targetCols);
 
-    //    // Copy dữ liệu từ trimmed grid vào vị trí trung tâm
-    //    for (int i = 0; i < trimRows && (offsetRow + i) < targetRows; i++)
-    //    {
-    //        for (int j = 0; j < trimCols && (offsetCol + j) < targetCols; j++)
-    //        {
-    //            expandedGrid[offsetRow + i, offsetCol + j] = trimmedGrid[i, j];
-    //            Debug.Log($"Value of ExpandGrid Tile({offsetRow + i}, {offsetCol + j}): {expandedGrid[offsetRow + i, offsetCol + j]}");
-    //        }
-    //    }
+        // Copy dữ liệu từ trimmed grid vào vị trí trung tâm
+        for (int i = 0; i < trimRows && (offsetRow + i) < targetRows; i++)
+        {
+            for (int j = 0; j < trimCols && (offsetCol + j) < targetCols; j++)
+            {
+                expandedGrid[offsetRow + i, offsetCol + j] = trimmedGrid[i, j];
+                Debug.Log($"Value of ExpandGrid Tile({offsetRow + i}, {offsetCol + j}): {expandedGrid[offsetRow + i, offsetCol + j]}");
+            }
+        }
 
-    //    return expandedGrid;
-    //}
+        return expandedGrid;
+    }
 
     /// <summary>
     /// Tạo grid rỗng với toàn bộ giá trị là "0"

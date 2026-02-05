@@ -1815,8 +1815,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a0711409a5d9ef4eb1058bbf0dd7f2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sourceRoot: {fileID: 875880453}
-  voxelSize: 0.1
+  sourceRoot: {fileID: 1953044381}
+  voxelSize: 0.15
   cubeFill: 0.99
   overlapInsetRatio: 0.02
   anchorToBoundsCenter: 1
@@ -23294,7 +23294,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3570e25848d2d734ea69a3156dabee7d, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.38
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 3570e25848d2d734ea69a3156dabee7d, type: 3}
       propertyPath: m_LocalPosition.y
@@ -66917,15 +66917,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c1e1b597a6e738d4c9b2fe7401460dc3, type: 3}
       propertyPath: m_LocalScale.x
-      value: 8
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c1e1b597a6e738d4c9b2fe7401460dc3, type: 3}
       propertyPath: m_LocalScale.y
-      value: 8
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c1e1b597a6e738d4c9b2fe7401460dc3, type: 3}
       propertyPath: m_LocalScale.z
-      value: 8
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c1e1b597a6e738d4c9b2fe7401460dc3, type: 3}
       propertyPath: m_LocalPosition.x
@@ -67041,7 +67041,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: c1e1b597a6e738d4c9b2fe7401460dc3, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2298886352505512965, guid: c1e1b597a6e738d4c9b2fe7401460dc3, type: 3}
       propertyPath: m_Layer
@@ -71443,10 +71443,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4516162152846472134, guid: 17e1b771f9f53af4b8d376f7e018267c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8876378881557189424, guid: 17e1b771f9f53af4b8d376f7e018267c, type: 3}
-      propertyPath: outPut
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []

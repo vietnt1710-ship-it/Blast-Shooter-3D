@@ -1,9 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO.Pipes;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using static ToolManager;
+using static Unity.VisualScripting.Member;
 
 public class Tool_Slot : MonoBehaviour
 {
@@ -131,8 +134,8 @@ public class Tool_Slot : MonoBehaviour
                 i--;
             }
         }
-        
 
+        ConfirmData();
         ToolManager.I.UpdateCount();
     }
     public void InitSlot()
@@ -251,33 +254,125 @@ public class Tool_Slot : MonoBehaviour
     }
     public void LoadData(string source)
     {
+        if (source == "0") return;
+        if (source == "") return;
         this.outPut = source;
 
         string be;
         string af;
-        try
-        {
+        //try
+        //{
+            int typeid = GridParse.TypeOf(source);
+
             GridParse.OnSplitBeAf(source, out be, out af);
 
-        }
-        catch
-        {
-            var latchBe = GridParse.IdAfter1Char(source);
+            if(typeid != 6)
+            {
+                LoadNornal(typeid, be, af);
+            }
+            else 
+            { 
+                LoadGara(be,af);
+            }
+           
 
-            if (latchBe >= 10)// có 2 chữ số thì là head, số sau là key
-            {
-                int latchID = GridParse.IdAfter1Char(latchBe.ToString());
-                typeText.gameObject.SetActive(true); typeText.text = latchID.ToString();
-                id = 81;
-            }
-            else
-            {
-                typeText.gameObject.SetActive(true); typeText.text = latchBe.ToString();
-                id = 8;
-            }
-        }
-        
+       //}
+       // catch
+       // {
+       //     var latchBe = GridParse.IdAfter1Char(source);
+
+       //     if (latchBe >= 10)// có 2 chữ số thì là head, số sau là key
+       //     {
+       //         int latchID = GridParse.IdAfter1Char(latchBe.ToString());
+       //         typeText.gameObject.SetActive(true); typeText.text = latchID.ToString(); type.color = typesColors[7];
+       //         id = 81;
+       //     }
+       //     else
+       //     {
+       //         typeText.gameObject.SetActive(true); typeText.text = latchBe.ToString(); type.color = typesColors[8];
+       //         id = 8;
+       //     }
+       // }
+
     }
+    public List<Color> typesColors;
+    public void LoadNornal(int ID, string be, string af)
+    {
+        Debug.Log($"LoadNornal {ID} ,{be} , {af} ");
+        string blc;
+        string cli;
+
+        GridParse.OnSplitBeAf(af, out blc, out cli);
+
+        bulletCount = int.Parse(blc);
+        colorID = int.Parse(cli);
+
+        Color color = ToolManager.I.colorWithID.ColorWithID2(colorID).color;
+        main.material.color = color;
+
+        main.gameObject.SetActive(true) ;
+        mainText.gameObject.SetActive(true);
+        mainText.text = blc;
+
+        type.gameObject.SetActive(true);
+        typeText.gameObject.SetActive(true);
+        type.color = typesColors[ID - 1];
+
+        switch (ID)
+        {
+            case 1: this.id = 1; type.gameObject.SetActive(false); break;
+            case 2: 
+                this.id = 2;
+                typeText.text = "?"; 
+                break;
+            case 3:
+                this.id = 3;
+                try
+                {
+                    int iceInvative = GridParse.IdAfter1Char(be);
+                    typeText.text = iceInvative.ToString();
+                }
+                catch
+                {
+                    Debug.Log("Error old ice");
+                }
+                break;
+            case 4: 
+                this.id = 4 ;
+                int keyID = GridParse.IdAfter1Char(be);
+                typeText.text = keyID.ToString(); break;
+            case 5:
+                this.id = 5;
+                int lockID = GridParse.IdAfter1Char(be);
+                typeText.text = lockID.ToString(); break;
+            case 7:
+                this.id = 7;
+                var connectID = GridParse.IdAfter1Char(be);
+                typeText.text = connectID.ToString(); break;
+
+        }
+
+    }
+    public void LoadGara(string be, string af)
+    {
+        this.id = 6;
+        main.gameObject.SetActive(true);
+        mainText.gameObject.SetActive(true);
+
+        type.gameObject.SetActive(true);
+        typeText.gameObject.SetActive(true);
+        typeText.text = be[1].ToString();
+        type.color = typesColors[id - 1];
+
+        List<string> ims = GridParse.OnSplitPipeIDs(af);
+        for (int i = 0; i < ims.Count; i++)
+        {
+            dataIngaras.Add(ims[i]);
+        }
+
+        ChangePipeDirection(int.Parse(be[1].ToString()));
+    }
+
     public void Clear()
     {
         id = 0;
@@ -298,6 +393,7 @@ public class Tool_Slot : MonoBehaviour
     }
     public void OnMouseExit()
     {
+        ConfirmData();
         isSelect = false;
     }
     public void OnMouseDown()

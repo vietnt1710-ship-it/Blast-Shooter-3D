@@ -12,21 +12,22 @@ public class Tool_SlotManager : MonoBehaviour
     {
         GetGridSlot();
     }
-    //public void ReLoad(string[,] sgrid)
-    //{
-    //    int rows = gridTile.GetLength(0);
-    //    int cols = gridTile.GetLength(1);
-    //    var grid = new string[rows, cols];
 
-    //    for (int row = 0; row < rows; row++)
-    //    {
-    //        for (int col = 0; col < cols; col++)
-    //        {
-    //            Debug.Log($"Value of tile{row} , {col} : {sgrid[row, col]}");
-    //            gridTile[row, col].ReLoad(sgrid[row, col]);
-    //        }
-    //    }
-    //}
+    public void ReLoad(string[,] sgrid)
+    {
+        int rows = gridTile.GetLength(0);
+        int cols = gridTile.GetLength(1);
+        var grid = new string[rows, cols];
+
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                gridTile[row, col].Clear();
+                gridTile[row, col].LoadData(sgrid[row, col]);
+            }
+        }
+    }
     public void Clear()
     {
         if (Time.time < 0.2f) return;

@@ -79,6 +79,18 @@ public class VoxelLayerPainter : MonoBehaviour
     public List<Button> _colorButtons = new List<Button>();
     readonly Dictionary<uint, int> _paletteIndex = new Dictionary<uint, int>(256);
 
+    // ====== fast lookup for add/remove by grid cell ======
+    readonly Dictionary<int, VoxelCubeTag> _cellToTag = new Dictionary<int, VoxelCubeTag>(4096);
+
+    int Nx => lastNx;
+    int Ny => lastNy;
+    int Nz => lastNz;
+
+    int CellId(int x, int y, int z) => x + Nx * (y + Ny * z);
+
+    bool InBounds(int x, int y, int z)
+        => x >= 0 && y >= 0 && z >= 0 && x < Nx && y < Ny && z < Nz;
+
     static uint Pack(Color32 c) => (uint)(c.r | (c.g << 8) | (c.b << 16) | (c.a << 24));
 
     void Awake()
@@ -116,39 +128,75 @@ public class VoxelLayerPainter : MonoBehaviour
             cameraRoot.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
 
-        // PAINT: update BOTH renderer + DATA + COUNTS
-        if (Input.GetMouseButton(0) && currentIndex != -1)
+        // CLICK tools: Ctrl = delete, Shift = add (prefer into object), else = paint
+        if (Input.GetMouseButtonDown(0)) // <- CHỈ 1 lần / 1 click
         {
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-            if (Physics.Raycast(ray, out RaycastHit hit, rayDistance, paintMask, QueryTriggerInteraction.Ignore))
+            // IMPORTANT: Shift/Ctrl đều cần hit cube để biết cell + normal
+            if (!Physics.Raycast(ray, out RaycastHit hit, rayDistance, paintMask, QueryTriggerInteraction.Ignore))
+                return;
+
+            var tag = hit.collider.GetComponent<VoxelCubeTag>();
+            if (tag == null || tag.data == null)
+                return;
+
+            // ===== CTRL: delete 1 cube =====
+            if (ctrl)
             {
-                var r = hit.collider.GetComponent<Renderer>();
-                if (r == null) return;
-
-                var tag = hit.collider.GetComponent<VoxelCubeTag>();
-                if (tag == null || tag.data == null) return;
-
-                // old/new color
-                Color32 oldColor = tag.data.color;
-                Color32 newColor = currentColor;
-
-                // nếu cùng màu thì thôi
-                if (Pack(oldColor) == Pack(newColor)) return;
-
-                // 1) Update DATA
-                tag.data.color = newColor;
-
-                // 2) Update Renderer
-                r.GetPropertyBlock(_mpb);
-                _mpb.SetColor("_BaseColor", (Color)newColor);
-                _mpb.SetColor("_Color", (Color)newColor);
-                r.SetPropertyBlock(_mpb);
-
-                // 3) Update counts + button text realtime
-                UpdateCountsAfterPaint(oldColor, newColor);
+                RemoveCubeByTag(tag);
+                return;
             }
+
+            // ===== SHIFT: add 1 cube (into object) =====
+            if (shift)
+            {
+                if (currentIndex == -1) return; // chưa chọn màu
+
+                int hx = tag.data.xIndex;
+                int hy = tag.yIndex;
+                int hz = tag.data.zIndex;
+
+                Vector3 n = hit.normal;
+                Vector3 an = new Vector3(Mathf.Abs(n.x), Mathf.Abs(n.y), Mathf.Abs(n.z));
+
+                int dx = 0, dy = 0, dz = 0;
+
+                // -normal: hướng "vào"
+                if (an.x >= an.y && an.x >= an.z) dx = (n.x > 0f) ? -1 : 1;
+                else if (an.y >= an.x && an.y >= an.z) dy = (n.y > 0f) ? -1 : 1;
+                else dz = (n.z > 0f) ? -1 : 1;
+
+                int ax = hx + dx;
+                int ay = hy + dy;
+                int az = hz + dz;
+
+                if (InBounds(ax, ay, az))
+                    AddCubeAt(ax, ay, az, currentColor);
+
+                return;
+            }
+
+            // ===== NORMAL: paint 1 cube =====
+            if (currentIndex == -1) return;
+
+            var r = hit.collider.GetComponent<Renderer>();
+            if (r == null) return;
+
+            Color32 oldColor = tag.data.color;
+            Color32 newColor = currentColor;
+
+            if (Pack(oldColor) == Pack(newColor)) return;
+
+            tag.data.color = newColor;
+            ApplyColorToRenderer(r, newColor);
+            UpdateCountsAfterPaint(oldColor, newColor);
         }
+
+
     }
 
     // ===================== UI =====================
@@ -161,6 +209,8 @@ public class VoxelLayerPainter : MonoBehaviour
         ClearColorButtons();
         LoadColorButton();      // tạo button + set text = count
         InitWhenDropDown();
+
+        RebuildCellLookup(); 
     }
 
     void BuildPaletteIndex()
@@ -536,5 +586,161 @@ public class VoxelLayerPainter : MonoBehaviour
 
         groupedByY.AddRange(layerMap.Values);
         groupedByY.Sort((a, b) => a.yIndex.CompareTo(b.yIndex));
+    }
+    void RebuildCellLookup()
+    {
+        _cellToTag.Clear();
+
+        for (int i = 0; i < groupedByY.Count; i++)
+        {
+            var g = groupedByY[i];
+            if (g?.cubes == null) continue;
+
+            int y = g.yIndex;
+            for (int j = 0; j < g.cubes.Count; j++)
+            {
+                var cd = g.cubes[j];
+                if (cd == null || cd.cube == null) continue;
+
+                var tag = cd.cube.GetComponent<VoxelCubeTag>();
+                if (tag == null) continue;
+
+                int id = CellId(cd.xIndex, y, cd.zIndex);
+                _cellToTag[id] = tag;
+            }
+        }
+    }
+
+    bool WorldToGrid(Vector3 world, out int x, out int y, out int z)
+    {
+        x = y = z = 0;
+        if (voxelizerPro == null) return false;
+
+        float vs = voxelizerPro.voxelSize;
+        if (vs <= 0f) return false;
+
+        Vector3 local = world - lastOrigin;
+
+        x = Mathf.FloorToInt(local.x / vs);
+        y = Mathf.FloorToInt(local.y / vs);
+        z = Mathf.FloorToInt(local.z / vs);
+
+        return InBounds(x, y, z);
+    }
+
+    Vector3 GridCenterToWorld(int x, int y, int z)
+    {
+        float vs = voxelizerPro.voxelSize;
+        return lastOrigin + new Vector3((x + 0.5f) * vs, (y + 0.5f) * vs, (z + 0.5f) * vs);
+    }
+
+    LayerGroup GetOrCreateGroup(int yIndex)
+    {
+        for (int i = 0; i < groupedByY.Count; i++)
+            if (groupedByY[i].yIndex == yIndex)
+                return groupedByY[i];
+
+        var g = new LayerGroup { yIndex = yIndex, cubes = new List<CubeData>() };
+        groupedByY.Add(g);
+        groupedByY.Sort((a, b) => a.yIndex.CompareTo(b.yIndex));
+        return g;
+    }
+
+    void ApplyColorToRenderer(Renderer r, Color32 col)
+    {
+        if (r == null) return;
+
+        r.GetPropertyBlock(_mpb);
+        _mpb.SetColor("_BaseColor", (Color)col);
+        _mpb.SetColor("_Color", (Color)col);
+        r.SetPropertyBlock(_mpb);
+    }
+
+    void RemoveCubeByTag(VoxelCubeTag tag)
+    {
+        if (tag == null || tag.data == null) return;
+
+        // remove from groupedByY list
+        int y = tag.yIndex;
+        int groupIndex = -1;
+        for (int i = 0; i < groupedByY.Count; i++)
+            if (groupedByY[i].yIndex == y) { groupIndex = i; break; }
+
+        if (groupIndex >= 0)
+        {
+            var list = groupedByY[groupIndex].cubes;
+            list.Remove(tag.data);
+        }
+
+        // update counts (1 cube removed from its old color)
+        Color32 oldColor = tag.data.color;
+        uint ok = Pack(oldColor);
+        if (_paletteIndex.TryGetValue(ok, out int oldIdx) && oldIdx >= 0 && oldIdx < cubeVerUniqueColors.Count)
+        {
+            cubeVerUniqueColors[oldIdx] = Mathf.Max(0, cubeVerUniqueColors[oldIdx] - 1);
+            UpdateButtonText(oldIdx);
+        }
+
+        // remove lookup
+        int cell = CellId(tag.data.xIndex, y, tag.data.zIndex);
+        _cellToTag.Remove(cell);
+
+        // destroy object
+        if (tag.gameObject != null)
+            Destroy(tag.gameObject);
+    }
+
+    void AddCubeAt(int x, int y, int z, Color32 col)
+    {
+        if (voxelizerPro == null || voxelizerPro.cubePrefab == null) return;
+        if (!InBounds(x, y, z)) return;
+
+        int cell = CellId(x, y, z);
+        if (_cellToTag.ContainsKey(cell)) return; // already filled
+
+        if (voxelizerPro.outputRoot == null)
+        {
+            var goRoot = new GameObject(name + "_Voxels");
+            goRoot.transform.SetParent(transform, false);
+            voxelizerPro.outputRoot = goRoot.transform;
+        }
+
+        Vector3 pos = GridCenterToWorld(x, y, z);
+
+        var go = Instantiate(voxelizerPro.cubePrefab, pos, Quaternion.identity, voxelizerPro.outputRoot);
+        go.transform.localScale = Vector3.one * (voxelizerPro.voxelSize * voxelizerPro.cubeFill);
+
+        var cd = new CubeData
+        {
+            xIndex = x,
+            zIndex = z,
+            color = col,
+            cube = go.transform
+        };
+
+        var g = GetOrCreateGroup(y);
+        g.cubes.Add(cd);
+
+        var tag = go.GetComponent<VoxelCubeTag>();
+        if (tag == null) tag = go.AddComponent<VoxelCubeTag>();
+        tag.data = cd;
+        tag.yIndex = y;
+
+        var r = go.GetComponent<Renderer>();
+        if (r != null)
+        {
+            if (voxelizerPro.voxelMaterial != null) r.sharedMaterial = voxelizerPro.voxelMaterial;
+            ApplyColorToRenderer(r, col);
+        }
+
+        _cellToTag[cell] = tag;
+
+        // update counts (1 cube added to this color)
+        uint nk = Pack(col);
+        if (_paletteIndex.TryGetValue(nk, out int newIdx) && newIdx >= 0 && newIdx < cubeVerUniqueColors.Count)
+        {
+            cubeVerUniqueColors[newIdx] += 1;
+            UpdateButtonText(newIdx);
+        }
     }
 }

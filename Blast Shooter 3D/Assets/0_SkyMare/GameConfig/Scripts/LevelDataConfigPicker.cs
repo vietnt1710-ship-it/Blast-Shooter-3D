@@ -156,7 +156,11 @@ public class LevelDataConfigPicker : MonoBehaviour
             return;
         }
         select = data;
+       
         voxelLayerPainter.LoadDataToRuntime(data);
+
+        ToolManager.I.LoadData();
+
     }
 
     // tiện cho bạn bấm chuột phải test
